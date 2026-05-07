@@ -2,7 +2,11 @@ import { useForm } from "react-hook-form";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+
 import { loginAdmin } from "../Service/Admin/auth/Login";
+import { useAuth } from "../Context/AuthContext";
+
+
 function Login() {
   const {
     register,
@@ -12,20 +16,22 @@ function Login() {
 
   const [errorServer, setErrorServer] = useState("");
   const navigate = useNavigate();
+  const { setUser, verifyAuth } = useAuth();
+
 
   const onSubmit = async (data) => {
-    setErrorServer("");
-
+    setErrorServer("")
     try {
-
-
       const res = await loginAdmin(data);
-
-
-      navigate("/dashboard");
-
+      if (res.status === 200) {
+        const userValidated = await verifyAuth();
+        if (userValidated) {
+          navigate("/dashboard");
+        }
+      }
 
     } catch (err) {
+      setErrorServer("no podes ingrsar")
       console.log(err)
     }
   };

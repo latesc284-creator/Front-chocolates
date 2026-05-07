@@ -1,9 +1,11 @@
-import  { useState } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { FiEye, FiEyeOff, FiUser, FiLock, FiLogIn, FiShield } from 'react-icons/fi';
-import {useNavigate} from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { loginPlayer } from "../Service/Admin/auth/LoginPlayer"
+
+import { useAuth } from "../Context/AuthContext";
 
 
 const FeriaPremiumLogin = () => {
@@ -30,24 +32,23 @@ const FeriaPremiumLogin = () => {
         }, 3000);
     };
 
+    const { setUser, verifyAuth } = useAuth();
+
     const onSubmit = async (data) => {
         setIsLoading(true);
 
         // Simular llamada al backend - Reemplazar con tu API real
         try {
             const res = await loginPlayer(data)
-            if(res.status === 200 ) navigate("/Inicio")
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            if (data.nombreUsuario === 'admin' && data.contrasena === 'admin123') {
-                showNotification('¡Bienvenido a la experiencia premium!', 'success');
-                reset();
-                // Redirigir después del login
-                // setTimeout(() => window.location.href = '/dashboard', 1500);
-            } else {
-                showNotification('Credenciales inválidas. Intenta de nuevo.', 'error');
+            console.log(res, "rs")
+            if (res.status === 200) {
+                const userValidated = await verifyAuth();
+                if (userValidated) {
+                    navigate("/Inicio");
+                }
             }
         } catch (error) {
-            showNotification('Error al iniciar sesión', 'error');
+            showNotification('Verifica Tus Datos', 'error');
         } finally {
             setIsLoading(false);
         }
@@ -58,9 +59,9 @@ const FeriaPremiumLogin = () => {
 
             {/* Notification Toast */}
             {notification.show && (
-                <div className={`fixed top-4 right-4 z-50 flex items-center gap-3 px-6 py-4 rounded-xl shadow-2xl animate-slide-in ${notification.type === 'success'
+                <div className={`fixed top-4 right-20 z-50 flex items-center gap-3 px-6 py-4 rounded-xl shadow-2xl animate-slide-in ${notification.type === 'success'
                     ? 'bg-gradient-to-r from-green-500 to-emerald-600'
-                    : 'bg-gradient-to-r from-red-500 to-rose-600'
+                    : 'bg-gradient-to-r from-red-500 to-rose-600 '
                     } text-white`}>
                     {notification.type === 'success' ? <FiShield size={20} /> : <FiLock size={20} />}
                     <span className="font-semibold">{notification.message}</span>
