@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -15,10 +15,11 @@ import {
   FiDollarSign,
   FiTrendingUp,
   FiAward,
-
-  FiLogOut,
   FiGrid,
   FiList,
+  FiChevronLeft,
+  FiChevronRight,
+  FiActivity
 } from "react-icons/fi";
 import { createUser } from "../Service/Admin/CreateUser";
 import { getAlluser } from "../Service/Admin/getAlluser";
@@ -32,120 +33,87 @@ const AdminDashboard = () => {
   const [activeModal, setActiveModal] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [notification, setNotification] = useState({ show: false, message: "", type: "" });
-  const [viewMode, setViewMode] = useState("grid"); // grid or list
-  const itemsPerPage = 10;
+  const [viewMode, setViewMode] = useState("grid");
+  const itemsPerPage = 8;
 
   const queryClient = useQueryClient();
 
   const showNotification = (message, type = "success") => {
     setNotification({ show: true, message, type });
-    setTimeout(() => {
-      setNotification({ show: false, message: "", type: "" });
-    }, 3000);
+    setTimeout(() => setNotification({ show: false, message: "", type: "" }), 3000);
   };
 
+  const closeModals = () => {
+    setActiveModal(null);
+    setSelectedUser(null);
+  };
+
+  // Queries
   const { data: usersData, isLoading, refetch } = useQuery({
     queryKey: ["users"],
     queryFn: getAlluser,
     staleTime: 30000,
   });
 
+  // Mutations
   const createUserMutation = useMutation({
     mutationFn: createUser,
     onSuccess: () => {
       queryClient.invalidateQueries(["users"]);
-      showNotification("User created successfully!", "success");
-      setActiveModal(null);
+      showNotification("Usuario creado con éxito", "success");
+      closeModals();
     },
-    onError: (error) => {
-      showNotification(error.response?.data?.message || "Error creating user", "error");
-    },
+    onError: (error) => showNotification(error.response?.data?.message || "Error al crear", "error"),
   });
 
   const addCreditsMutation = useMutation({
     mutationFn: addCredits,
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries(["users"]);
-      showNotification(`Added ${data?.amount || data?.data?.amount} credits!`, "success");
-      setActiveModal(null);
-      setSelectedUser(null);
+      showNotification(`Créditos cargados correctamente`, "success");
+      closeModals();
     },
-    onError: (error) => {
-      showNotification(error.response?.data?.message || "Error adding credits", "error");
-    },
+    onError: () => showNotification("Error en la carga", "error"),
   });
 
   const removeCreditsMutation = useMutation({
     mutationFn: removeCredits,
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries(["users"]);
-      showNotification(`Removed ${data?.amount || data?.data?.amount} credits!`, "success");
-      setActiveModal(null);
-      setSelectedUser(null);
+      showNotification(`Créditos retirados con éxito`, "success");
+      closeModals();
     },
-    onError: (error) => {
-      showNotification(error.response?.data?.message || "Error removing credits", "error");
-    },
+    onError: () => showNotification("Error al retirar", "error"),
   });
 
+  // Logic
   const filteredUsers = usersData?.data?.filter((user) =>
     user.UserName?.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
 
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
-  const paginatedUsers = filteredUsers.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const sortedUsers = [...filteredUsers].sort((a, b) => (b.credits || 0) - (a.credits || 0));
+  const paginatedUsers = sortedUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  // Sort users by credits (highest first)
-  const sortedUsers = [...paginatedUsers].sort((a, b) => (b.credits || 0) - (a.credits || 0));
-
+  // --- Modals ---
   const CreateUserModal = () => {
-    const { register, handleSubmit, reset, formState: { errors } } = useForm();
-
-    const onSubmit = (data) => {
-      createUserMutation.mutate(data);
-      reset();
-    };
-
+    const { register, handleSubmit, formState: { errors } } = useForm();
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
-        <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl w-full max-w-md p-6 border border-yellow-500/30 shadow-2xl">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-yellow-500 rounded-lg">
-              <FiUserPlus className="text-black" size={24} />
-            </div>
-            <h2 className="text-2xl font-bold text-white">Create New User</h2>
+      <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200">
+        <div className="bg-[#111113] border border-yellow-500/30 rounded-[2.5rem] w-full max-w-md p-8 shadow-2xl">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-black text-white uppercase tracking-wider">Nuevo Jugador</h2>
+            <button onClick={closeModals} className="text-gray-500 hover:text-white"><FiX size={24} /></button>
           </div>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Username</label>
-              <input
-                {...register("UserName", { required: "Username is required" })}
-                className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-white placeholder-gray-400"
-                placeholder="Enter username"
-              />
-              {errors.UserName && (
-                <p className="text-red-400 text-sm mt-1">{errors.UserName.message}</p>
-              )}
-            </div>
-            <div className="flex gap-3 pt-4">
-              <button
-                type="submit"
-                disabled={createUserMutation.isPending}
-                className="flex-1 bg-gradient-to-r from-yellow-500 to-yellow-600 text-black font-semibold py-3 rounded-lg hover:from-yellow-400 hover:to-yellow-500 transition-all duration-200 transform hover:scale-105 disabled:opacity-50"
-              >
-                {createUserMutation.isPending ? "Creating..." : "Create User"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveModal(null)}
-                className="flex-1 bg-gray-700 text-gray-300 py-3 rounded-lg hover:bg-gray-600 transition"
-              >
-                Cancel
-              </button>
-            </div>
+          <form onSubmit={handleSubmit((data) => createUserMutation.mutate(data))} className="space-y-5">
+            <input
+              {...register("UserName", { required: "Username requerido" })}
+              className="w-full px-6 py-4 bg-gray-800/50 border border-gray-700 rounded-2xl focus:border-yellow-500 outline-none text-white transition-all"
+              placeholder="Nombre de usuario"
+            />
+            <button className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-black py-4 rounded-2xl transition-all active:scale-95 uppercase tracking-widest">
+              {createUserMutation.isPending ? "Procesando..." : "Registrar"}
+            </button>
           </form>
         </div>
       </div>
@@ -153,71 +121,39 @@ const AdminDashboard = () => {
   };
 
   const CreditsModal = ({ type }) => {
-    const { register, handleSubmit, reset, formState: { errors } } = useForm({
-      defaultValues: { UserName: selectedUser?.UserName || "" }
-    });
+    const { register, handleSubmit } = useForm({ defaultValues: { UserName: selectedUser?.UserName } });
+    const isAdd = type === "add";
 
-    const onSubmit = (data) => {
-      const mutation = type === "add" ? addCreditsMutation : removeCreditsMutation;
-      mutation.mutate({ UserName: data.UserName, amount: parseInt(data.amount) });
-      reset();
+    const onAction = (data) => {
+      const payload = { UserName: data.UserName, amount: Number(data.amount) };
+      isAdd ? addCreditsMutation.mutate(payload) : removeCreditsMutation.mutate(payload);
     };
 
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
-        <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl w-full max-w-md p-6 border border-yellow-500/30 shadow-2xl">
-          <div className="flex items-center gap-3 mb-6">
-            <div className={`p-2 rounded-lg ${type === "add" ? "bg-green-500" : "bg-red-500"}`}>
-              {type === "add" ? <FiPlusCircle className="text-white" size={24} /> : <FiMinusCircle className="text-white" size={24} />}
+      <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[100] p-4 animate-in zoom-in-95 duration-200">
+        <div className={`bg-[#111113] border ${isAdd ? 'border-green-500/30' : 'border-red-500/30'} rounded-[2.5rem] w-full max-w-md p-8 shadow-2xl`}>
+          <h2 className="text-xl font-black text-white uppercase mb-6 flex items-center gap-2">
+            {isAdd ? <FiPlusCircle className="text-green-500" /> : <FiMinusCircle className="text-red-500" />}
+            {isAdd ? "Cargar Saldo" : "Retirar Saldo"}
+          </h2>
+          <form onSubmit={handleSubmit(onAction)} className="space-y-6">
+            <div className="bg-gray-800/50 p-4 rounded-2xl border border-gray-700">
+              <p className="text-[10px] text-gray-500 uppercase font-black">Jugador</p>
+              <p className="text-white font-bold">{selectedUser?.UserName}</p>
             </div>
-            <h2 className="text-2xl font-bold text-white">
-              {type === "add" ? "Add Credits" : "Remove Credits"}
-            </h2>
-          </div>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Username</label>
-              <input
-                {...register("UserName", { required: "Username is required" })}
-                className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-white"
-                readOnly={!!selectedUser}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Amount</label>
+            <div className="relative">
+              <FiDollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-yellow-500" />
               <input
                 type="number"
-                {...register("amount", {
-                  required: "Amount is required",
-                  min: { value: 1, message: "Amount must be positive" }
-                })}
-                className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-white"
-                placeholder="Enter amount"
+                {...register("amount", { required: true, min: 1 })}
+                className="w-full pl-10 pr-5 py-4 bg-gray-800 border border-gray-700 rounded-2xl text-white text-xl font-bold outline-none focus:border-white transition-all"
+                placeholder="Monto"
               />
-              {errors.amount && (
-                <p className="text-red-400 text-sm mt-1">{errors.amount.message}</p>
-              )}
             </div>
-            <div className="flex gap-3 pt-4">
-              <button
-                type="submit"
-                disabled={addCreditsMutation.isPending || removeCreditsMutation.isPending}
-                className={`flex-1 py-3 rounded-lg font-semibold transition-all duration-200 transform hover:scale-105 disabled:opacity-50 ${type === "add"
-                  ? "bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-400 hover:to-green-500"
-                  : "bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-400 hover:to-red-500"
-                  }`}
-              >
-                {type === "add" ? "Add Credits" : "Remove Credits"}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveModal(null);
-                  setSelectedUser(null);
-                }}
-                className="flex-1 bg-gray-700 text-gray-300 py-3 rounded-lg hover:bg-gray-600 transition"
-              >
-                Cancel
+            <div className="flex gap-3">
+              <button type="button" onClick={closeModals} className="flex-1 py-4 text-gray-400 font-bold">Cancelar</button>
+              <button className={`flex-1 py-4 rounded-2xl font-black text-white uppercase tracking-widest ${isAdd ? 'bg-green-600' : 'bg-red-600'}`}>
+                Confirmar
               </button>
             </div>
           </form>
@@ -226,352 +162,161 @@ const AdminDashboard = () => {
     );
   };
 
-  const UserCardGrid = ({ user, index }) => (
-    <div className="group relative bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-700 hover:border-yellow-500/50">
-      {/* Card Glow Effect */}
-      <div className="absolute inset-0 bg-gradient-to-r from-yellow-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-
-      {/* Top Rank Badge */}
-      {index < 3 && (
-        <div className="absolute top-3 right-3 z-10">
-          <div className={`px-2 py-1 rounded-full text-xs font-bold ${index === 0 ? 'bg-yellow-500 text-black' : index === 1 ? 'bg-gray-400 text-black' : 'bg-orange-600 text-white'}`}>
-            #{index + 1}
-          </div>
-        </div>
-      )}
-
-      <div className="p-5">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-full flex items-center justify-center">
-            <span className="text-black font-bold text-xl">
-              {user.UserName?.charAt(0).toUpperCase()}
-            </span>
-          </div>
-          <div className="flex-1">
-            <h3 className="font-bold text-white text-lg">{user.UserName}</h3>
-            <p className="text-gray-400 text-xs">ID: {user._id?.slice(-8)}</p>
-          </div>
-        </div>
-
-        <div className="bg-black/30 rounded-xl p-3 mb-4">
-          <div className="flex items-center justify-between">
-            <span className="text-gray-400 text-sm">Total Credits</span>
-            <div className="flex items-center gap-1">
-              <FiDollarSign className="text-yellow-500" size={18} />
-              <span className="text-2xl font-bold text-yellow-500">{user.credits || 0}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex gap-2">
-          <button
-            onClick={() => {
-              setSelectedUser(user);
-              setActiveModal("addCredits");
-            }}
-            className="flex-1 bg-green-600 hover:bg-green-500 text-white py-2 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 font-semibold"
-          >
-            <FiPlusCircle size={16} /> Add
-          </button>
-          <button
-            onClick={() => {
-              setSelectedUser(user);
-              setActiveModal("removeCredits");
-            }}
-            className="flex-1 bg-red-600 hover:bg-red-500 text-white py-2 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 font-semibold"
-          >
-            <FiMinusCircle size={16} /> Remove
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  const UserCardList = ({ user, index }) => (
-    <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-4 hover:shadow-xl transition-all duration-300 border border-gray-700 hover:border-yellow-500/50">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center gap-4 flex-1">
-          <div className="w-10 h-10 bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-full flex items-center justify-center">
-            <span className="text-black font-bold">{user.UserName?.charAt(0).toUpperCase()}</span>
-          </div>
-          <div>
-            <h3 className="font-bold text-white">{user.UserName}</h3>
-            <p className="text-gray-400 text-xs">ID: {user._id?.slice(-8)}</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 bg-black/30 px-4 py-2 rounded-lg">
-          <FiDollarSign className="text-yellow-500" size={18} />
-          <span className="text-xl font-bold text-yellow-500">{user.credits || 0}</span>
-        </div>
-
-        <div className="flex gap-2">
-          <button
-            onClick={() => {
-              setSelectedUser(user);
-              setActiveModal("addCredits");
-            }}
-            className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg transition flex items-center gap-2"
-          >
-            <FiPlusCircle size={16} /> Add
-          </button>
-          <button
-            onClick={() => {
-              setSelectedUser(user);
-              setActiveModal("removeCredits");
-            }}
-            className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg transition flex items-center gap-2"
-          >
-            <FiMinusCircle size={16} /> Remove
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 to-black">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-yellow-500 mx-auto mb-4"></div>
-          <p className="text-white text-lg">Loading casino dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black">
-      {/* Animated Background */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-yellow-500/10 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-red-500/10 rounded-full blur-3xl"></div>
-      </div>
+    <div className="min-h-screen bg-[#0a0a0b] text-gray-100 selection:bg-yellow-500/30">
 
-      {/* Notification */}
-      {notification.show && (
-        <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-6 py-4 rounded-xl shadow-2xl animate-slide-in ${notification.type === "success"
-          ? "bg-gradient-to-r from-green-500 to-green-600"
-          : "bg-gradient-to-r from-red-500 to-red-600"
-          } text-white`}>
-          {notification.type === "success" ? <FiCheckCircle size={20} /> : <FiAlertCircle size={20} />}
-          <span className="font-semibold">{notification.message}</span>
+      {/* HEADER SUPERIOR */}
+      <header className="fixed top-0 left-0 right-0 h-20 bg-[#111113]/80 backdrop-blur-xl border-b border-gray-800 z-50 px-6 flex items-center justify-between lg:px-12">
+        <div className="flex items-center gap-3">
+
+          <h1 className="text-lg font-black uppercase italic tracking-tighter"> Panel Admin</h1>
         </div>
-      )}
 
-      {/* Mobile Menu Button */}
-      <button
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="lg:hidden fixed top-4 left-4 z-50 bg-gradient-to-r from-yellow-500 to-yellow-600 text-black p-3 rounded-xl shadow-xl"
-      >
-        {sidebarOpen ? <FiX size={24} /> : <FiMenu size={24} />}
-      </button>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="lg:hidden p-3 bg-gray-800 rounded-xl text-yellow-500"
+          >
+            {sidebarOpen ? <FiX size={20} /> : <FiMenu size={20} />}
+          </button>
+          <div className="hidden lg:flex items-center gap-2 bg-gray-800/50 px-4 py-2 rounded-xl border border-gray-700">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Server Online</span>
+          </div>
+        </div>
+      </header>
 
-      {/* Sidebar */}
-      <div className={`
-        fixed lg:static inset-y-0 left-0 transform 
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
-        lg:translate-x-0 transition duration-300 ease-in-out
-        z-40 w-72 bg-gradient-to-b from-gray-900 to-gray-800 shadow-2xl
-      `}>
-        <div className="p-6">
-          <div className="flex items-center gap-3 mb-10">
-            <div className="p-2 bg-yellow-500 rounded-xl">
-             hoola
+      <div className="flex pt-20">
+        {/* SIDEBAR DESLIZANTE */}
+        <aside className={`
+          fixed inset-y-0 left-0 z-40 w-72 bg-[#111113] border-r border-gray-800 transform transition-transform duration-500 ease-in-out pt-20
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 lg:sticky lg:top-20 lg:h-[calc(100vh-80px)]
+        `}>
+          <div className="p-8 space-y-4">
+            <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4">Administración</p>
+            <button
+              onClick={() => { setActiveModal("createUser"); setSidebarOpen(false); }}
+              className="w-full flex items-center gap-4 px-6 py-4 bg-yellow-500 text-black rounded-2xl font-black transition-all hover:scale-[1.02] shadow-lg shadow-yellow-500/10"
+            >
+              <FiUserPlus size={20} /> CREAR USER
+            </button>
+            <button
+              onClick={() => { refetch(); showNotification("Sincronizado"); setSidebarOpen(false); }}
+              className="w-full flex items-center gap-4 px-6 py-4 text-gray-400 hover:text-white hover:bg-gray-800 rounded-2xl transition-all font-bold"
+            >
+              <FiRefreshCw size={20} /> ACTUALIZAR
+            </button>
+          </div>
+        </aside>
+
+        {/* OVERLAY PARA MÓVIL */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          ></div>
+        )}
+
+        {/* MAIN CONTENT */}
+        <main className="flex-1 p-6 lg:p-10 w-full">
+          {/* Stats Summary */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+            <div className="bg-[#111113] p-6 rounded-[2rem] border border-gray-800">
+              <FiUsers className="text-yellow-500 mb-2" size={20} />
+              <p className="text-2xl font-black text-white">{filteredUsers.length}</p>
+              <p className="text-[10px] font-bold text-gray-500 uppercase">Total Jugadores</p>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-white">Casino Admin</h1>
-              <p className="text-yellow-500 text-xs">Premium Dashboard</p>
+            <div className="bg-[#111113] p-6 rounded-[2rem] border border-gray-800">
+              <FiDollarSign className="text-green-500 mb-2" size={20} />
+              <p className="text-2xl font-black text-white">{filteredUsers.reduce((s, u) => s + (u.credits || 0), 0).toLocaleString()}</p>
+              <p className="text-[10px] font-bold text-gray-500 uppercase">Créditos en Red</p>
             </div>
           </div>
 
-          <nav className="space-y-3">
-            <button
-              onClick={() => setActiveModal("createUser")}
-              className="w-full flex items-center gap-3 px-4 py-3 text-gray-300 hover:text-white hover:bg-yellow-500/20 rounded-xl transition-all duration-200 group"
-            >
-              <FiUserPlus className="text-yellow-500" size={20} />
-              <span className="font-medium">Create User</span>
-            </button>
-            <button
-              onClick={() => {
-                refetch();
-                showNotification("Refreshing users...", "success");
-              }}
-              className="w-full flex items-center gap-3 px-4 py-3 text-gray-300 hover:text-white hover:bg-yellow-500/20 rounded-xl transition-all duration-200 group"
-            >
-              <FiRefreshCw className="text-yellow-500" size={20} />
-              <span className="font-medium">Refresh</span>
-            </button>
-            <div className="pt-6 mt-6 border-t border-gray-700">
-              <div className="px-4 py-3">
-                <p className="text-gray-500 text-xs">Total Users Managed</p>
-                <p className="text-2xl font-bold text-white">{filteredUsers.length}</p>
-              </div>
-            </div>
-          </nav>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="lg:ml-72 p-4 lg:p-8 relative z-10">
-        <div className="max-w-7xl mx-auto">
-          {/* Header Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-6 border border-gray-700 hover:border-yellow-500/50 transition-all duration-300">
-              <div className="flex items-center justify-between mb-2">
-                <FiUsers className="text-yellow-500" size={24} />
-                <span className="text-xs text-gray-400">Total Users</span>
-              </div>
-              <p className="text-3xl font-bold text-white">{filteredUsers.length}</p>
-            </div>
-
-            <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-6 border border-gray-700 hover:border-yellow-500/50 transition-all duration-300">
-              <div className="flex items-center justify-between mb-2">
-                <FiDollarSign className="text-yellow-500" size={24} />
-                <span className="text-xs text-gray-400">Total Credits</span>
-              </div>
-              <p className="text-3xl font-bold text-yellow-500">
-                {filteredUsers.reduce((sum, user) => sum + (user.credits || 0), 0).toLocaleString()}
-              </p>
-            </div>
-
-            <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-6 border border-gray-700 hover:border-yellow-500/50 transition-all duration-300">
-              <div className="flex items-center justify-between mb-2">
-                <FiTrendingUp className="text-yellow-500" size={24} />
-                <span className="text-xs text-gray-400">Average Credits</span>
-              </div>
-              <p className="text-3xl font-bold text-white">
-                {filteredUsers.length > 0
-                  ? Math.round(filteredUsers.reduce((sum, user) => sum + (user.credits || 0), 0) / filteredUsers.length).toLocaleString()
-                  : 0}
-              </p>
-            </div>
-
-            <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-6 border border-gray-700 hover:border-yellow-500/50 transition-all duration-300">
-              <div className="flex items-center justify-between mb-2">
-                <FiAward className="text-yellow-500" size={24} />
-                <span className="text-xs text-gray-400">Top Player</span>
-              </div>
-              <p className="text-lg font-bold text-white truncate">
-                {sortedUsers[0]?.UserName || "N/A"}
-              </p>
-              <p className="text-yellow-500 text-sm">{sortedUsers[0]?.credits || 0} credits</p>
-            </div>
-          </div>
-
-          {/* Search and View Controls */}
+          {/* Search Bar & View Toggle */}
           <div className="flex flex-col md:flex-row gap-4 mb-8">
-            <div className="flex-1 relative">
-              <FiSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <div className="relative flex-1">
+              <FiSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500" />
               <input
                 type="text"
-                placeholder="Search players by username..."
+                placeholder="Buscar jugador por nombre..."
                 value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full pl-12 pr-4 py-3 bg-gray-800 border border-gray-700 rounded-xl focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-white placeholder-gray-400"
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-[#111113] border border-gray-800 rounded-2xl py-4 pl-14 pr-6 focus:border-yellow-500 outline-none transition-all"
               />
             </div>
-
-            <div className="flex gap-2">
-              <button
-                onClick={() => setViewMode("grid")}
-                className={`p-3 rounded-xl transition-all duration-200 ${viewMode === "grid"
-                  ? "bg-yellow-500 text-black"
-                  : "bg-gray-800 text-gray-400 hover:text-white"
-                  }`}
-              >
-                <FiGrid size={20} />
-              </button>
-              <button
-                onClick={() => setViewMode("list")}
-                className={`p-3 rounded-xl transition-all duration-200 ${viewMode === "list"
-                  ? "bg-yellow-500 text-black"
-                  : "bg-gray-800 text-gray-400 hover:text-white"
-                  }`}
-              >
-                <FiList size={20} />
-              </button>
+            <div className="flex bg-[#111113] p-1.5 rounded-2xl border border-gray-800 self-end md:self-auto">
+              <button onClick={() => setViewMode("grid")} className={`p-3 rounded-xl ${viewMode === 'grid' ? 'bg-gray-800 text-yellow-500' : 'text-gray-500'}`}><FiGrid /></button>
+              <button onClick={() => setViewMode("list")} className={`p-3 rounded-xl ${viewMode === 'list' ? 'bg-gray-800 text-yellow-500' : 'text-gray-500'}`}><FiList /></button>
             </div>
           </div>
 
-          {/* Users Grid/List */}
-          {sortedUsers.length > 0 ? (
-            viewMode === "grid" ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {sortedUsers.map((user, idx) => (
-                  <UserCardGrid key={user._id} user={user} index={idx} />
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {sortedUsers.map((user, idx) => (
-                  <UserCardList key={user._id} user={user} index={idx} />
-                ))}
-              </div>
-            )
+          {/* User List */}
+          {isLoading ? (
+            <div className="h-64 flex items-center justify-center"><FiRefreshCw className="animate-spin text-yellow-500" size={32} /></div>
           ) : (
-            <div className="text-center py-20 bg-gray-800/50 rounded-2xl">
-              <FiUsers className="mx-auto text-gray-600" size={64} />
-              <p className="text-gray-400 mt-4 text-lg">No players found</p>
+            <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6" : "space-y-3"}>
+              {paginatedUsers.map((user) => (
+                <div key={user._id} className={`bg-[#111113] border border-gray-800 rounded-[2rem] p-6 hover:border-yellow-500/40 transition-all group ${viewMode === 'list' ? 'flex items-center justify-between gap-6 py-4' : ''}`}>
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-gradient-to-tr from-gray-700 to-gray-800 rounded-2xl flex items-center justify-center text-yellow-500 font-black border border-gray-700">
+                      {user.UserName?.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-white leading-none">{user.UserName}</h3>
+                      <p className="text-[10px] text-gray-500 font-mono mt-1 italic">{user._id?.slice(-8)}</p>
+                    </div>
+                  </div>
+
+                  <div className={`flex items-center gap-2 ${viewMode === 'grid' ? 'my-6 py-3 bg-black/20 rounded-2xl justify-center border border-gray-800/50' : 'px-6'}`}>
+                    <FiDollarSign className="text-yellow-500" size={14} />
+                    <span className="text-xl font-black text-white">{user.credits || 0}</span>
+                  </div>
+
+                  <div className="flex gap-2 justify-center w-full">
+                    <button
+                      onClick={() => { setSelectedUser(user); setActiveModal("addCredits"); }}
+                      className="flex items-center justify-center gap-2 bg-green-600/10 hover:bg-green-600 text-green-500 hover:text-white p-3 rounded-xl   transition-all border border-green-600/20"
+                    >
+                      <FiPlusCircle size={18} />
+                      <span className="text-xs font-bold uppercase tracking-widest">Cargar</span>
+                    </button>
+                    <button
+                      onClick={() => { setSelectedUser(user); setActiveModal("removeCredits"); }}
+                      className="flex items-center justify-center gap-2 bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white p-3 rounded-xl transition-all border border-red-600/20"
+                    >
+                      <FiMinusCircle size={18} />
+                      <span className="text-xs font-bold uppercase tracking-widest">Quitar</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex justify-center gap-3 mt-8">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="px-6 py-2 bg-gray-800 border border-gray-700 rounded-lg disabled:opacity-50 hover:bg-gray-700 transition text-white font-medium"
-              >
-                Previous
-              </button>
-              <div className="flex gap-2">
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = currentPage - 2 + i;
-                  }
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={`w-10 h-10 rounded-lg transition font-medium ${currentPage === pageNum
-                        ? "bg-yellow-500 text-black"
-                        : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-                        }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-              </div>
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="px-6 py-2 bg-gray-800 border border-gray-700 rounded-lg disabled:opacity-50 hover:bg-gray-700 transition text-white font-medium"
-              >
-                Next
-              </button>
+            <div className="mt-12 flex justify-center items-center gap-4">
+              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} className="w-12 h-12 bg-[#111113] border border-gray-800 rounded-xl flex items-center justify-center text-gray-500 hover:text-yellow-500"><FiChevronLeft size={20} /></button>
+              <div className="text-sm font-black text-gray-500 uppercase tracking-widest">{currentPage} / {totalPages}</div>
+              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} className="w-12 h-12 bg-[#111113] border border-gray-800 rounded-xl flex items-center justify-center text-gray-500 hover:text-yellow-500"><FiChevronRight size={20} /></button>
             </div>
           )}
-        </div>
+        </main>
       </div>
 
       {/* Modals */}
       {activeModal === "createUser" && <CreateUserModal />}
       {activeModal === "addCredits" && <CreditsModal type="add" />}
       {activeModal === "removeCredits" && <CreditsModal type="remove" />}
+
+      {/* Notifications */}
+      {notification.show && (
+        <div className={`fixed bottom-6 right-6 z-[100] px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 border animate-in slide-in-from-bottom-5 ${notification.type === 'success' ? 'bg-green-600 border-green-400' : 'bg-red-600 border-red-400'} text-white`}>
+          {notification.type === 'success' ? <FiCheckCircle size={20} /> : <FiAlertCircle size={20} />}
+          <span className="font-bold text-sm">{notification.message}</span>
+        </div>
+      )}
     </div>
   );
 };
