@@ -22,7 +22,7 @@ const FeriaHome = () => {
           {/* Logo y Nombre */}
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-[#a27b5c] to-[#3d1d13] rounded-lg flex items-center justify-center shadow-lg">
-              <span className="text-white font-serif font-bold">FC</span>
+              <span className="text-white font-serif font-bold">FCc</span>
             </div>
             <div>
               <h1 className="text-lg font-black uppercase tracking-widest leading-none">Feria de Chocolates</h1>
