@@ -17,7 +17,7 @@ const WIN_MSGS = [
   "¡Increíble jugada! 🎰",
 ];
 
-const API_GIRAR = "http://localhost:3000/api/v1/playerProtected/girarRuleta";
+const API_GIRAR = import.meta.env.VITE_URL_BACK_USER + "/girarRuleta";
 
 // Funciones para generar sonidos (Web Audio API)
 const playBeepSound = (frequency, duration, volume = 0.3) => {
