@@ -40,7 +40,7 @@ const FeriaPremiumLogin = () => {
         // Simular llamada al backend - Reemplazar con tu API real
         try {
             const res = await loginPlayer(data)
-            console.log(res, "rs")
+            
             if (res.status === 200) {
                 const userValidated = await verifyAuth();
                 if (userValidated) {

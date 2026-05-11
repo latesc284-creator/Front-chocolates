@@ -1,7 +1,7 @@
 const API_URL_ADMIN = import.meta.env.VITE_URL_BACK_USER;
 
 export const loginPlayer = async (data) => {
-  console.log("data", data);
+ 
 
   try {
     const response = await fetch(`${API_URL_ADMIN}/login`, {

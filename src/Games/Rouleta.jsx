@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getCreditsRule } from "../Service/user/getCreditsRule";
+import Header from "../Components/User/Header/Header";
 
 const ROJOS = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
 const ROWS = [
@@ -400,7 +401,7 @@ function MesaHorizontal({ winZones, apuestas, apostar }) {
           </div>
 
           <div className="flex flex-col gap-0.5">
-            {[["COL1", "2:1"], ["COL2", "2:1"], ["COL3", "2:1"]].map(([k, l]) => (
+            {[["COL1", "3:1"], ["COL2", "3:1"], ["COL3", "3:1"]].map(([k, l]) => (
               <Cell key={k} zona={k} label={l} cls="text-[9px]"
                 style={{ width: 32, height: 36, background: winZones.has(k) ? "#236b38" : "#0e4020", color: "#80e090", border: "1px solid rgba(201,168,76,.3)" }} />
             ))}
@@ -434,7 +435,7 @@ function MesaHorizontal({ winZones, apuestas, apostar }) {
 
 // ── Mesa vertical (Móvil - mismo diseño pero vertical) ────────
 function MesaVertical({ winZones, apuestas, apostar }) {
-  const cellBase = "relative flex items-center justify-center font-bold cursor-pointer rounded-sm border transition-all duration-100 select-none hover:brightness-125 hover:scale-105 hover:z-10 hover:border-amber-400 active:scale-95";
+  const cellBase = "relative flex px-4 items-center justify-center font-bold cursor-pointer rounded-sm border transition-all duration-100 select-none hover:brightness-125 hover:scale-105 hover:z-10 hover:border-amber-400 active:scale-95";
 
   const Cell = ({ zona, cls = "", label, style = {} }) => {
     const isWin = winZones.has(String(zona));
@@ -508,7 +509,7 @@ function MesaVertical({ winZones, apuestas, apostar }) {
       </div>
 
       <div className="flex gap-1 mb-2">
-        {[["COL1", "2:1"], ["COL2", "2:1"], ["COL3", "2:1"]].map(([k, l]) => (
+        {[["COL1", "3:1"], ["COL2", "3:1"], ["COL3", "3:1"]].map(([k, l]) => (
           <Cell key={k} zona={k} label={l} cls="text-[9px] flex-1"
             style={{ height: 32, background: winZones.has(k) ? "#236b38" : "#0e4020", color: "#80e090", border: "1px solid rgba(201,168,76,.3)" }} />
         ))}
@@ -761,8 +762,11 @@ export default function RuletaChocolates() {
   const nombre = resultado ? (resultado.numeroGanador === 0 ? "VERDE" : isR ? "ROJO" : "NEGRO") : "";
 
   return (
+    <>
+    <Header/>
+   
     <div
-      className="min-h-screen flex flex-col items-center px-2 py-3 pb-16 select-none"
+      className="min-h-screen px-4 flex flex-col items-center px-2 py-3 pb-16 select-none"
       style={{
         background: "linear-gradient(145deg,#1a0a00 0%,#0a0400 100%)",
         fontFamily: "'Georgia','Times New Roman',serif",
@@ -976,5 +980,6 @@ export default function RuletaChocolates() {
         <WinOverlay resultado={resultado} onClose={() => setShowWin(false)} />
       )}
     </div>
+     </>
   );
 }

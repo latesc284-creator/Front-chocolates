@@ -17,6 +17,8 @@ export default function Header() {
         staleTime: 0,
     });
 
+   
+
     // Mapeo según tu JSON: { data: { name, credits, id } }
     const player = response?.data;
 
