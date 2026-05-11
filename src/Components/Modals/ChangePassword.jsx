@@ -52,7 +52,7 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
         <form onSubmit={handleSubmit(onSubmit)} className="p-7 space-y-6">
           <div className="bg-[#a27b5c]/5 border border-[#a27b5c]/10 p-4 rounded-xl"> {/* Caja de info amigable */}
             <p className="text-sm text-[#e7d4b5]/90 leading-relaxed">
-              Hola <span className="font-bold text-[#a27b5c]">Jose Arias</span>, por seguridad es necesario que establezcas una contraseña nueva para tu cuenta.
+              Hola <span className="font-bold text-[#a27b5c]">Jugador</span>, por seguridad es necesario que establezcas una contraseña nueva para tu cuenta.
             </p>
           </div>
 
